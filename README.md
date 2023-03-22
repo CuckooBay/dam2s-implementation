@@ -3,6 +3,9 @@ This is a group project for HKU COMP7404 Computational Intelligence. We are grou
 
 
 TODO:
+- [ ] add data downloading script
 - [ ] implement DAM2S-A
 - [ ] implement DAM2S-B
 - [ ] implement DAM2S-C
+- [ ] report
+- [ ] presentation slides
