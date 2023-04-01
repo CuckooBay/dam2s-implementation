@@ -11,6 +11,9 @@ class DFeatureExtractor:
         self.radius = radius
 
     def __call__(self, images):
+        '''
+            images.shape = (n, 224, 224, 3)
+        '''
         fds = np.array([ self.getFeature(self.convertColorToGrayscale(image)) for image in images ])
         return fds
 
