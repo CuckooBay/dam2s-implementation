@@ -1,7 +1,9 @@
+import torch
 import numpy as np
+import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
-from typing import Type, Any, Union, List, Optional, cast
+from typing import Type, Any, Union, List
 from collections import OrderedDict 
 from torchvision.models.resnet import *
 from torchvision.models.resnet import BasicBlock, Bottleneck
@@ -25,6 +27,9 @@ class IntResNet(ResNet):
     def _forward_impl(self, x):
         for l in self._layers:
             x = self.layers[l](x)
+
+        m = nn.AdaptiveAvgPool2d((1, 1))
+        x = m(x)
 
         return x
 
@@ -54,7 +59,6 @@ def new_resnet(
 
     model = IntResNet(outlayer, block, layers, **kwargs)
     if pretrained:
-        # state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
         state_dict = model_zoo.load_url(model_urls[arch])
         model.load_state_dict(state_dict)
     return model
@@ -62,19 +66,21 @@ def new_resnet(
 
 class VFeatureExtractor:
     def __init__(self):
-        self.model = new_resnet('resnet18', 'layer4', BasicBlock, [2, 2, 2, 2], True, True)
+        # self.model = new_resnet('resnet18', 'layer4', BasicBlock, [2, 2, 2, 2], True, True)
         # self.model = new_resnet('resnet34', 'layer4', BasicBlock, [3, 4, 6, 3], True, True)
-        # self.model = new_resnet('resnet50', 'layer4', Bottleneck, [3, 4, 6, 3], True, True)
+        self.model = new_resnet('resnet50', 'layer4', Bottleneck, [3, 4, 6, 3], True, True)
 
     def __call__(self, images):
         '''
-            images.shape = (n, 3, 224, 224)
+            images.shape = (n, 224, 224, 3)
         '''
-        # images = self.reshape_images(images)
-        # print(images.shape)
+        images = self.reshape_images(images) # output: (n, 3, 224, 224)
         fds = self.model(images).cpu().data.numpy()
         fds = np.array([ fd.flatten() for fd in fds ])
         return fds
 
-    # def reshape_images(self, images):
-    #     return torch.from_numpy(images.reshape((images.shape[0], 3, 224, 224)))
+    def reshape_images(self, images):
+        # change from (n, 224, 224, 3) to (n, 3, 224, 224)
+        images = torch.from_numpy(np.transpose(images, (0, 3, 1, 2)))
+        images = images.float()
+        return images
