@@ -23,9 +23,7 @@ class DFeatureExtractor:
     def getFeature(self, image):
         hog_fd = self.getHOGDES(image).flatten()
         lbp_fd = self.getLBPDES(image).flatten()
-        fd = np.concatenate((hog_fd, lbp_fd), axis=None)
-        print(hog_fd)
-        print(lbp_fd)
+        fd = np.concatenate((hog_fd, lbp_fd), axis=None) # concatenate HOG and LBP feature vectors
         return fd
     
     def getHOGDES(self, image):
