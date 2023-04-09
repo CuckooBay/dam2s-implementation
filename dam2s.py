@@ -55,18 +55,42 @@ class dam2s_a(nn.Module):
         #calculate overall matrix B
         self.mat_B=self.mat_B_kcca-self.l*self.mat_B_mmd
 
+        #calculate matrix Gamma
+        mat_Gamma=0  #TBD
+    
+        #calculate G
+        mat_G_left_U=torch.cat((self.kermat_d,mat_zeros_ss),1)
+        mat_G_left_L=torch.cat((mat_zeros_ss,self.kermat_v_s),1)
+        mat_G_left=torch.cat((mat_G_left_U,mat_G_left_L),0)
+        mat_G=torch.mm(mat_G_left,mat_Gamma)
+        
         #calculate B_tilde
-        mat_G_U=torch.cat((self.kermat_d,mat_zeros_ss),1)
-        mat_G_L=torch.cat((mat_zeros_ss,self.kermat_v_s),1)
-
+        self.mat_B_tilde=mu*self.mat_B+torch.mm(mat_G,mat_G.T)
 
         
     def dual_descent(self,label,kermat_d,kermat_v_s,kermat_v_st):
         t=0
-        mat_zeros=torch.zeros((self.num_samples,self.num_samples)) #zeros matrix with ns*ns
-        mat_D_U=torch.cat((torch.mm(kermat_d,kermat_d),mat_zeros),1)  #D_U matrix
-        mat_D_L=torch.cat((mat_zeros,torch.mm(kermat_v_st,kermat_v_st)),1) #D_L matrix
+        mat_zeros_ss=torch.zeros((self.num_samples,self.num_samples)) #zeros matrix with ns*ns
+        mat_D_U=torch.cat((torch.mm(kermat_d,kermat_d),mat_zeros_ss),1)  #D_U matrix
+        mat_D_L=torch.cat((mat_zeros_ss,torch.mm(kermat_v_st,kermat_v_st)),1) #D_L matrix
         mat_D=torch.cat((mat_D_U,mat_D_L),0) #D matrix
+
+        #Choelesky decomposition to get matrix C
+        mat_C=torch.cholesky(mat_D)
+        mat_C_inv=torch.linalg.inv(mat_C)
+        mat_CBC=torch.mm(mat_C_inv.T,self.mat_B_tilde)
+        mat_CBC=torch.mm(mat_CBC,mat_C_inv)
+
+        #eigen decomposition to get matrix U
+        mat_U=torch.linalg.eigh(mat_CBC)
+        #U_tilde containing the m leading eigenvectors in U corresponding to the largest eigenvalues.
+        mat_U_tilde=mat_U[:,0:self.dim_sub]  #TBD
+        mat_A=mat_C_inv*mat_U_tilde
+        #calculate mat_U_tilde
+        #calculate 
+
+
+        #calculating 
         pass
 
         
