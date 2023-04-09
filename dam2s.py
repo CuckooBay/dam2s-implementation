@@ -67,6 +67,7 @@ class dam2s_a(nn.Module):
         mat_D_U=torch.cat((torch.mm(kermat_d,kermat_d),mat_zeros),1)  #D_U matrix
         mat_D_L=torch.cat((mat_zeros,torch.mm(kermat_v_st,kermat_v_st)),1) #D_L matrix
         mat_D=torch.cat((mat_D_U,mat_D_L),0) #D matrix
+        pass
 
         
 
