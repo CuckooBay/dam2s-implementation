@@ -21,6 +21,13 @@ class dam2s_a(nn.Module):
         self.v_error_slack = nn.Parameter(torch.rand(num_samples, num_classes))
         self.d_error_slack = nn.Parameter(torch.rand(num_samples, num_classes))
 
+    def forward(self, t_features):
+        x = self.v_proj(t_features)
+        out = (self.v_svm(x) + self.d_svm(x)) / 2
+        return out
+        
+         
+
 class cmp(cooper.ConstrainedMinimizationProblem):
     def __init__(self, subspace_dim, num_classes, c=1, mu=1e5, l=1e-2):
         super(cmp, self).__init__(is_constrained=True)
