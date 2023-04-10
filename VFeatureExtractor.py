@@ -75,8 +75,10 @@ class VFeatureExtractor:
             images.shape = (n, 224, 224, 3)
         '''
         images = self.reshape_images(images) # output: (n, 3, 224, 224)
-        fds = self.model(images).cpu().data.numpy()
-        fds = np.array([ fd.flatten() for fd in fds ])
+        # fds = self.model(images).cpu().data.numpy()
+        # fds = np.array([ fd.flatten() for fd in fds ])
+        fds = self.model(images).cpu().squeeze(-1).squeeze(-1)
+        # fds = torch.Tensor([ fd.flatten() for fd in fds ])
         return fds
 
     def reshape_images(self, images):
