@@ -3,6 +3,7 @@ import numpy as np
 
 from skimage.feature import hog
 from skimage.feature import local_binary_pattern
+import torch
 
 
 class DFeatureExtractor:
@@ -15,6 +16,7 @@ class DFeatureExtractor:
             images.shape = (n, 224, 224, 3)
         '''
         fds = np.array([ self.getFeature(self.convertColorToGrayscale(image)) for image in images ])
+        fds = torch.Tensor(fds)
         return fds
 
     def convertColorToGrayscale(self, image):
