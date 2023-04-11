@@ -3,15 +3,18 @@ from torch import nn
 #import cooper
 #from cooper import CMPState
 import liblinear
+import scipy
 from torch.nn import functional as F
 
 class dam2s_a(nn.Module):
-    def __init__(self, num_classes, num_samples_s,num_samples_t,dim_sub,feat_v_s,feat_d,feat_v_t,c=1.0, mu=1e5, l=1e-2, **kwargs):
+    def __init__(self, num_classes, num_samples_s,num_samples_t,label,dim_sub,feat_v_s,feat_d,feat_v_t,c=1.0, mu=1e5, l=1e-2, **kwargs):
         super(dam2s_a, self).__init__(**kwargs)
         #hyper parameters
         self.mu=mu
         self.l=l
         
+        #label
+        self.label=label
         #extracted features with shape (ns, dim_v) and (ns, dim_d)
         self.feat_d=feat_d
         self.feat_v_s=feat_v_s
@@ -59,13 +62,19 @@ class dam2s_a(nn.Module):
         mat_Gamma=0  #TBD
     
         #calculate G
-        mat_G_left_U=torch.cat((self.kermat_d,mat_zeros_ss),1)
-        mat_G_left_L=torch.cat((mat_zeros_ss,self.kermat_v_s),1)
-        mat_G_left=torch.cat((mat_G_left_U,mat_G_left_L),0)
-        mat_G=torch.mm(mat_G_left,mat_Gamma)
+        mat_H_U=torch.cat((self.kermat_d,mat_zeros_ss),1)  
+        mat_H_L=torch.cat((mat_zeros_ss,self.kermat_v_s),1)
+        self.mat_H=torch.cat((mat_H_U,mat_H_L),0)     #H=[[Kd,0],[0,Kvs]]
+        mat_G=torch.mm(self.mat_H,mat_Gamma)
         
         #calculate B_tilde
         self.mat_B_tilde=mu*self.mat_B+torch.mm(mat_G,mat_G.T)
+
+        #calculate E
+        self.mat_E=torch.ones((2*self.num_samples_s,self.num_classes))
+        for i in range(2*self.num_samples_s):
+            self.mat_E[i,label[i]]=0
+
 
         
     def dual_descent(self,label,kermat_d,kermat_v_s,kermat_v_st):
@@ -81,13 +90,23 @@ class dam2s_a(nn.Module):
         mat_CBC=torch.mm(mat_C_inv.T,self.mat_B_tilde)
         mat_CBC=torch.mm(mat_CBC,mat_C_inv)
 
-        #eigen decomposition to get matrix U
-        mat_U=torch.linalg.eigh(mat_CBC)
         #U_tilde containing the m leading eigenvectors in U corresponding to the largest eigenvalues.
-        mat_U_tilde=mat_U[:,0:self.dim_sub]  #TBD
-        mat_A=mat_C_inv*mat_U_tilde
-        #calculate mat_U_tilde
-        #calculate 
+        mat_U_tilde=scipy.linalg.eigh(mat_CBC,subset_by_index=[2*self.num_samples_s-self.dim_sub,2*self.num_samples_s-1])
+
+        #calculate A
+        mat_A=torch.mm(mat_C_inv,mat_U_tilde)
+        
+        #calculate kermat A
+        kermat_A=torch.mm(self.mat_H,mat_A)
+
+        
+
+        
+        #calculate H
+
+
+        #calculate mat_Gamma
+         
 
 
         #calculating 
@@ -95,29 +114,4 @@ class dam2s_a(nn.Module):
 
         
 
-'''
-class cmp(cooper.ConstrainedMinimizationProblem):
-    def __init__(self, subspace_dim, num_classes, c=1, mu=1e5, l=1e-2):
-        super(cmp, self).__init__(is_constrained=True)
-        self.c = c
-        self.mu = mu
-        self.l = l
-        self.subspace_dim = subspace_dim
-        self.num_classes = num_classes
 
-    def closure(self, v_features, d_features, labels, t_features, *trainable_params) -> CMPState:
-        hot_label = F.one_hot(labels, self.num_classes) * 2 - 1
-        v_error_slack, d_error_slack, v_proj_mat, d_proj_mat, v_svm_mat, v_svm_bias, d_svm_mat, d_svm_bias = trainable_params
-        v_sub = torch.matmul(v_features, v_proj_mat.transpose(0, 1))
-        d_sub = torch.matmul(d_features, d_proj_mat.transpose(0, 1))
-        t_sub = torch.matmul(t_features, v_proj_mat.transpose(0, 1))
-
-        svm_regularitor_loss = 0.5 * (torch.sum(torch.square(v_svm_mat)) + torch.sum(torch.square(d_svm_mat)))
-        slack_loss = torch.sum(v_error_slack + d_error_slack)
-        mmd_loss = 0.5 * torch.norm(torch.mean(v_sub, 0) - torch.mean(t_sub, 0), 2)
-        mfc_loss = - torch.trace(torch.matmul(d_sub.transpose(0, 1), v_sub))
-        total_loss = svm_regularitor_loss + self.c * slack_loss + self.mu * mmd_loss + self.l * mfc_loss
-        eq_constraint = torch.matmul(v_sub.transpose(0, 1), v_sub) + torch.matmul(d_sub.transpose(0, 1), d_sub) - torch.eye(self.subspace_dim)
-        ineq_constraint = torch.concat([-v_error_slack, -d_error_slack, 1 - v_error_slack - hot_label * (torch.matmul(v_sub, v_svm_mat.transpose(0, 1))) - v_svm_bias, 1 - d_error_slack - hot_label * (torch.matmul(d_sub, d_svm_mat.transpose(0, 1)) + d_svm_bias)], dim=0)
-        return  CMPState(loss=total_loss, ineq_defect=ineq_constraint, eq_defect=eq_constraint)
-'''
